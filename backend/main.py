@@ -5,6 +5,21 @@ import io
 
 app = FastAPI(title="Educational Content Assistant (RAG)")
 
+def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
+    """
+    Splits text into overlapping chunks.
+    """
+    chunks = []
+    start = 0
+
+    while start < len(text):
+        end = start + chunk_size
+        chunk = text[start:end]
+        chunks.append(chunk)
+        start = end - overlap
+
+    return chunks
+
 @app.get("/")
 def root():
     return {"status": "Backend is running 🚀"}
@@ -31,8 +46,17 @@ def upload_file(file: UploadFile = File(...)):
             detail="Only PDF and TXT files are supported"
         )
 
+    if not text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No extractable text found in the file"
+        )
+
+    chunks = chunk_text(text)
+
     return JSONResponse({
         "filename": file.filename,
-        "characters_extracted": len(text),
-        "preview": text[:500]
+        "total_characters": len(text),
+        "total_chunks": len(chunks),
+        "sample_chunks": chunks[:3]
     })
